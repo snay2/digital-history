@@ -1,6 +1,6 @@
 momento.db
-out.txt
+out.tex
 *.*~
 *.pyc
 *.swp
-
+momento-backup/
