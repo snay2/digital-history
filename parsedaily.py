@@ -3,6 +3,7 @@ from datetime import datetime
 from datetime import timedelta
 from dateutil import tz
 import re
+import calendar
 
 timestamp_origin = 978307200 # 1 January 2001 00:00:00 GMT
 
@@ -20,26 +21,52 @@ def convertTime(timestamp):
 # Sanitize the body and escape any characters
 def sanitizeText(body):
     body = body.encode('ascii', 'ignore')
-    modified = re.sub(r'''([_#$&%])''', r'''\\\1''', body)
-    return modified
+    body = re.sub(r'''([_#$&%])''', r'''\\\1''', body)
+    return body
 
-conn = sqlite3.connect('momento.db')
-c = conn.cursor()
+all_post_types = ['note', 'facebook', 'twitter', '', 'lastfm', 'foursquare',
+        'blogpost', '', 'instagram']
 
-# Run the query
-query = 'select zday, zdate, zbody from zmoment inner join zday where ' +\
-    'zday.z_pk=zmoment.zday and zmoment.zmomenttype=2 order by zdate asc;'
+def getPostTag(index):
+    # Don't include last.fm or foursquare posts
+    if (index in [4, 5]):
+        return ''
+    return all_post_types[index]
 
-daytracker = 0
+def outputPosts(rows):
+    current_day = 0
 
-# Output the posts, grouped by day
-for row in c.execute(query):
-    thisdate = convertTime(row[1]).strftime("%A %d %B %Y")
-    thistime = convertTime(row[1]).strftime("%H:%M")
-    thisbody = sanitizeText(row[2])
-    if (thisbody[0] != '@'):
-        if (daytracker != row[0]):
-            print '\\subsection*{%s}\n' % (thisdate)
-            daytracker = row[0]
-        print '\\twitter{%s}{%s}\n' % (thistime, thisbody)
+    # Output the posts, grouped by day
+    for row in rows:
+        post_time = convertTime(row[1]).strftime("%H:%M")
+        post_body = sanitizeText(row[2])
+        post_tag = getPostTag(row[3])
+
+        if (post_tag != '' and post_body[0] != '@'):
+            # Output the day header if it hasn't already been done
+            if (current_day != row[0]):
+                post_date = convertTime(row[1]).strftime("%A %d %B %Y")
+                print '\\subsection*{%s}\n' % (post_date)
+                current_day = row[0]
+            print '\\%s{%s}{%s}\n' % (post_tag, post_time, post_body)
+
+def main(year):
+    conn = sqlite3.connect('momento.db')
+    c = conn.cursor()
+
+    # Run the query for each month of the given year
+    for month in range(1,13):
+        query = 'select zday, zdate, zbody, zmomenttype from zmoment ' +\
+            'inner join zday ' +\
+            'where zday.z_pk=zmoment.zday and zmoment.zbody!="" ' +\
+            'and zday.zdatemonth=%s and zday.zdateyear=%s order by zdate asc;' \
+            % (month, year)
+
+        print '\\chapter*{%s}\n' % (calendar.month_name[month])
+        print '\\section*{Background}\n'
+        print '\\section*{Daily history}\n'
+        outputPosts(c.execute(query))
+
+if __name__ == '__main__':
+    main(2012)
 
