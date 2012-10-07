@@ -16,7 +16,11 @@ Follow these steps to use digital-history:
 1. Unzip the file. Find the Database.momentodb file.
 1. Copy that into the same directory as the Python script in this project
 1. Rename it to `momento.db`
-1. At the command line, run `python parsedaily.py > out.tex`
+1. At the command line, run `python extractposts.py > out.tex`
 
 The output of the script is a partial LaTeX file that can be included with `\input`.
+
+## TODO
+
+- Build another script to pull down Instagram images and blog posts, embed them in the LaTeX document.
 
